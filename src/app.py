@@ -39,6 +39,15 @@ async def authenticate(credentials: HTTPAuthorizationCredentials = Depends(http_
         )
     return credentials.credentials
 
+@web_app.post("/moderate_character")
+async def moderate_character(
+    agent_config:PromptConfig,
+    credentials: str = Depends(authenticate)):
+    print("POST /moderate_input")
+    if not check_agent_config(agent_config):
+        raise HTTPException(status_code=400, detail="Invalid agent configuration POST /prompt")
+    return modal_agent.moderate_character.remote(agent_config)
+    
 @web_app.post("/generate_avatar")
 async def generate_avatar(
     agent_config:PromptConfig,credentials: str = Depends(authenticate)):

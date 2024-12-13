@@ -59,6 +59,7 @@ modal deploy src.app
   - agent/: Modal agent implementation
   - handlers/: Image and LLM handling logic
   - models/: Data models and schemas
+  - gcp_constants: GCP related constants
 - test/
   - characters/: Character YAML files
   - client.py: Test client implementation

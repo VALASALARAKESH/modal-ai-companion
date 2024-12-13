@@ -15,7 +15,6 @@ import re
 euler_a_models = [ "156375","286821","303526","378499","293564","384264" ]
 getimg_anime_style_models = ["reproduction-v3-31","real-cartoon-xl-v6","sdvn7-niji-style-xl-v1","counterfeit-xl-v2-5","animagine-xl-v-3-1"]
 
-
 class ImageHandler:
     def __init__(self):
         self.file_service = FileService('/cloud-images')
@@ -34,7 +33,7 @@ class ImageHandler:
 
         payload = {
             "model": agent_config.image_config.image_model,
-            "prompt": prompt,
+            "prompt":prompt,
             "negative_prompt": agent_config.image_config.negative_prompt,
             "width": agent_config.image_config.image_width,
             "height": agent_config.image_config.image_height,
@@ -44,16 +43,15 @@ class ImageHandler:
             "output_format": agent_config.image_config.image_format
         }
 
-        #if payload.get("model") in getimg_anime_style_models:
-            #payload["negative_prompt"] = anime_style_negative_prompt
-
         get_img_sdxl_models = [ "juggernaut-xl-v10","realvis-xl-v4","reproduction-v3-31","real-cartoon-xl-v6","sdvn7-niji-style-xl-v1","counterfeit-xl-v2-5","animagine-xl-v-3-1"]
         
         if payload.get("model") in get_img_sdxl_models:
             self.getimg_base_url = "https://api.getimg.ai/v1/stable-diffusion-xl/text-to-image"
             payload['scheduler'] = 'euler'
             
-        
+        if payload.get("model") in getimg_anime_style_models:
+            payload['negative_prompt'] = agent_config.image_config.anime_negative_prompt
+            
         #print(f"Generating image with GetImg API: {payload}")
         try:
             response = requests.post(self.getimg_base_url, headers=headers, json=payload)
@@ -71,11 +69,17 @@ class ImageHandler:
     def generate_image(self, prompt: str, agent_config: AgentConfig, folder: str = "images",preallocated_image_name:str = "") -> Optional[str]:
         """Generate an image and save it to the specified folder."""
         try:
+            
+            #print("Image model: ", agent_config.image_config.image_model)
             if (agent_config.image_config.provider == "getimg" or "https" not in agent_config.image_config.image_model)\
             and "flux-general-with-lora" not in agent_config.image_config.image_model \
             and "SG161222/Realistic_Vision_V6.0_B1_noVAE" not in agent_config.image_config.image_model \
             and "fal-ai/flux/dev" not in agent_config.image_config.image_model \
             and "fal-ai/stable-diffusion-v35-medium" not in agent_config.image_config.image_model:
+                
+                if agent_config.image_config.image_model in getimg_anime_style_models:
+                    prompt = "masterpiece, "+prompt
+                    
                 #print(f"Generating image with GetImg")
                 image_data = self._generate_with_getimg(prompt, agent_config)
                 if image_data:
@@ -141,10 +145,12 @@ class ImageHandler:
         num_inference_steps = agent_config.image_config.num_inference_steps
         model_architecture = agent_config.image_config.image_model_architecture
         api_path = agent_config.image_config.image_api_path
-        
+        prompt_prefix ="Photo of "
         if any(euler_model in agent_config.image_config.image_model for euler_model in euler_a_models):
+            prompt_prefix = "masterpiece, "
             scheluder_config = "Euler A"
             num_inference_steps = "30"
+            negative_prompt = agent_config.image_config.anime_negative_prompt
 
         if agent_config.image_config.image_model == "SG161222/Realistic_Vision_V6.0_B1_noVAE":
             agent_config.image_config.image_api_path = "fal-ai/realistic-vision"
@@ -154,7 +160,7 @@ class ImageHandler:
 
         # Prepare job details based on agent config
         job_details = {
-            "prompt": prompt,
+            "prompt": prompt_prefix+prompt,
             "model_name": agent_config.image_config.image_model,
             "negative_prompt": negative_prompt,
             "num_inference_steps": num_inference_steps,
@@ -166,7 +172,8 @@ class ImageHandler:
             "model_architecture":agent_config.image_config.image_model_architecture,
             "image_format": agent_config.image_config.image_format,
             "prompt_weighting": True,
-            "num_images": 1,
+            "num_images": 1
+            
         }
         
         formatted_job_details = json.dumps(job_details, indent=4)
@@ -235,7 +242,7 @@ class ImageHandler:
         print("Timeout waiting for image generation")
         return None
 
-    def check_for_image_request(self,messages: List[dict], agent_config: AgentConfig) -> tuple[bool, str, str]:
+    def check_for_image_request(self,messages: List[dict], agent_config: AgentConfig) -> tuple[bool, str, str,bool]:
         """check for Image request"""
     
         local_messages = messages.copy()
@@ -275,13 +282,11 @@ class ImageHandler:
     User: {local_messages[-2]['content']}
     Character: {local_messages[-1]['content']}
     
-    Format response as:
+    Additionally, review the character's message to determine R-rating, if character is clearly naked (NC-17) or if unsure then rating is R.
+    Format response as a structured JSON:
     {{
-        "result": True/False,
-        "reasoning": "Brief explanation of the visual trigger, user and character",
-        "visual_type": "outfit_change/user_request/character_action/implied_request",
-        "trigger_phrase": "Quote the relevant triggering phrase or action, user and character"
-    }}"
+        "result": true/false,
+        "r-rating": "NC-17,R"
     }}""").rstrip()
         #print(prompt)
         local_messages.append({"role": "user", "content": prompt})    
@@ -291,16 +296,29 @@ class ImageHandler:
                                                temperature=0.2,
                                                model=agent_config.llm_config.reasoning_model,
                                                provider=agent_config.llm_config.reasoning_provider,
-                                               stop_words=[',\n']
+                                               max_tokens=50
                                               ):
             reasoning_response += token
         #print(f"Reasoning response: {reasoning_response}")
-        if "true" in reasoning_response.lower():
+        explicit = False
+        try:
+            json_data = json.loads(reasoning_response.strip())
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON response: {str(e)}")
+            
+        json_data = json.loads(reasoning_response)
+        nudity_status = json_data.get("r-rating", "R").lower()
+        
+        if "nc-17" in nudity_status.lower():
+            explicit = True
+
+        result_status = json_data.get("result", False)
+        if result_status:
             preallocated_name, public_url = self.file_service.generate_preallocated_url(agent_config, "images")
-            return True, preallocated_name, public_url
-        return False, "", ""
+            return True, preallocated_name, public_url, explicit
+        return False, "", "", False
     
-    def request_image_generation(self,messages: List[dict],agent_config: AgentConfig,preallocated_image_name:str = ""):
+    def request_image_generation(self,messages: List[dict],agent_config: AgentConfig,preallocated_image_name:str = "",explicit= False):
         """request image generation"""
     
         def get_last_ten_messages_with_system(self, messages: List[dict]) -> List[dict]:
@@ -316,78 +334,111 @@ class ImageHandler:
             return last_ten_messages
     
         local_messages = messages.copy()
-        prompt_prefix = ""
-        prompt_suffix = "masterpiece ,realistic,skin texture,ultra detailed,highres, RAW,8k, selfie, self shot,depth of field"
-        
-        if any(euler_model in agent_config.image_config.image_model for euler_model in euler_a_models) or \
-        agent_config.image_config.image_model in getimg_anime_style_models:
-            prompt_prefix = "masterpiece, best quality, very aesthetic, absurdres,"
-            prompt_suffix = ""
+        sfw_prompt =  " Ensure the image description does not contain explicit content."
+        if explicit:
+            sfw_prompt= ""
             
-            
-        prompt = f"""
-Generate concise, high-density image description with maximum 20 keywords total across all categories, as a JSON object.
-Character appearance: {agent_config.character.appearance}
+        prompt = textwrap.dedent(f"""
+        <Instruction>
+        Analyze the current scene and character appearance to generate a updated detailed visual description optimized for image generation, making sure description is up to date to the latest message.
 
-Include keywords that describe:
-- Character: Character's physical appearance and current expression
-- Actions: Notable action or pose
-- Visual Elements: Important visual elements from the current context
-- Environment: Setting and environment
-- Lightning: Lighting and atmosphere
-- Atmosphere: Atmospheric effects
+        Format your response as a structured JSON with the following categories:
 
-- Quality Details: Quality details (resolution, style e.g. {prompt_prefix}{prompt_suffix})
+        {{
+            "ImageDescriptionKeywords": {{
+                "Character": [
+                    "identity descriptors",
+                    "age and gender",
+                    "ethnicity if relevant",
+                    "body type and build"
+                ],
+                "Pose & Expression": [
+                    "current body posture",
+                    "facial expression",
+                    "emotional state",
+                    "current gestural details"
+                ],
+                "Physical Features": [
+                    "facial features, generate if missing",
+                    "body features and details, generate if missing",
+                    "hair style and color, generate if missing",
+                    "eye details, generate if missing",
+                    "skin details, generate if missing"
+                ],
+                "Clothes": [
+                    "detailed descriptions of clothing items if any, including types and visible named garments",
+                    "specify colors and patterns, if any", 
+                    "materials and textures, if any",
+                    "accessories, if any"
+                ],
+                "Environment": [
+                    "location details",
+                    "lighting conditions",
+                    "time of day",
+                    "weather,only if relevant"
+                ],
+                "Artistic Style": [
+                    "art direction",
+                    "rendering style",
+                    "mood and atmosphere"
+                ]
+                "MessageSummary": "concise summary of recent visual actions and gestures by the character",
+            }}
+        }}
 
-Describe concise image for {agent_config.character.name}'s message: {local_messages[-1]['content']}
+        Keep descriptions precise and visually focused, using specific keywords that translate well to image generation.
+        Track all appearance changes from previous interactions, omit removed details e.g. clothes and add new details.
+        Maintain consistency with established character traits.
+        Use high-density visual descriptors for maximum detail.
+        Match the descriptors to the align with last message context: {local_messages[-1]['content']}
+        Keep it short and consise and avoid repeating descriptions.{sfw_prompt}""").rstrip()
 
-Consider chat history for context but analyze the main point of the message that would describe a freeze image, fill in missing relevant keywords from previous messages. Keep it concise and dense, using up to 20 keywords total across all ategories.
-Return ONLY a JSON object, like this format:
-{{
-  "Character": "description here",
-  "Actions": "action or pose here",
-  "Visual Elements": "visual elements",
-  "Environment": "Environment setting here",
-  "Lighting": "lighting details",
-  "Atmosphere": "atmosphere details",
-  "Quality Details": "quality details"
-}}""".rstrip()
-        #print(prompt)
         image_description_response = ""
         local_messages.append({"role": "user", "content": prompt})
         for token in self.llm_handler.generate(local_messages,
                                                agent_config,
                                                temperature=0.2,
                                                model=agent_config.llm_config.reasoning_model,
-                                               provider=agent_config.llm_config.reasoning_provider):
+                                               provider=agent_config.llm_config.reasoning_provider,
+                                               max_tokens=800):
             image_description_response += token
+
         #print(image_description_response)
-        image_prompt = self.parse_image_description(image_description_response).strip()
+        cleaned_response = image_description_response.replace("```json", "").replace("```", "").strip()
+        json_data = json.loads(cleaned_response)
+        image_prompt_list = self.parse_appearance(json_data)
+        image_prompt = ', '.join(filter(None, self.remove_duplicate_strings(image_prompt_list)))
+        
+        if not explicit:
+            agent_config.image_config.negative_prompt = "((nsfw, explicit, uncensored, nudity, partial clothes)), "+ agent_config.image_config.negative_prompt
+            agent_config.image_config.anime_negative_prompt = "((nsfw, explicit, uncensored, nudity,partial clothes)), "+ agent_config.image_config.anime_negative_prompt
+            
         image_url = self.generate_image(image_prompt,agent_config,preallocated_image_name=preallocated_image_name)
         #print(image_url)
         if image_url:
             return f"![{image_prompt}]({image_url})"
         return None
+
+    def remove_duplicate_strings(self, image_prompt_list: List[str]) -> List[str]:
+        """Remove duplicate strings from the list."""
+        return list(dict.fromkeys(image_prompt_list))
     
-    
-    def parse_image_description(self, image_description_response: str) -> str:
+    def parse_appearance(self, appearance_obj):
+        """Recursively traverse appearance object and join all non-empty string values, with error handling."""
+        parts = []
         try:
-            # Clean up the response
-            cleaned_response = image_description_response.replace("```json", "").replace("```", "").strip()
-
-            # Parse JSON object
-            data = json.loads(cleaned_response)
-
-            # Extract all values and join them
-            result = []
-            for key, value in data.items():
-                if value and isinstance(value, str):
-                        result.append(value.strip())
-
-            return ", ".join(result)
+            if isinstance(appearance_obj, dict):
+                for value in appearance_obj.values():
+                    parts.extend(self.parse_appearance(value))
+            elif isinstance(appearance_obj, list):
+                for item in appearance_obj:
+                    parts.extend(self.parse_appearance(item))
+            elif isinstance(appearance_obj, str) and appearance_obj.strip():
+                parts.append(appearance_obj.strip())
         except Exception as e:
-            print(f"Error parsing image description: {str(e)}")
-            return image_description_response
+            print(f"Error processing appearance object: {str(e)}")
+        return [part for part in parts if part]
+        
 
     
     def format_messages_to_display(self,local_messages: list) -> str:
@@ -398,3 +449,23 @@ Return ONLY a JSON object, like this format:
                 formatted_messages.append(f"{role}: {msg['content']}")
     
         return "\n".join(formatted_messages)
+
+    def update_appearance_from_image_message(self, local_messages: List[dict],agent_config:AgentConfig):
+        # Step 1: Find the last image message
+        last_image_message = next((msg for msg in reversed(local_messages) if msg.get('tag') == 'image'), None)
+        if last_image_message:
+            # Step 2: Extract keywords from the markdown
+            image_content = last_image_message['content']
+            match = re.search(r'!\[(.*?)\]\((.*?)\)', image_content)
+            if match:
+                keywords = match.group(1)  # Extract keywords
+                # Step 3: Update the appearance variable in system prompt
+                for msg in local_messages:
+                    if msg.get('role') == 'system':
+                        # Append extracted keywords to appearance
+                        if 'Appearance' in msg['content']:
+                            msg['content'] = msg['content'].replace('Appearance: ', f"Appearance: {keywords},")
+                            #print(msg['content'])
+                        break  # Update only the first system message
+        local_messages = [msg for msg in local_messages if msg.get('tag') != 'image'] 
+        return local_messages

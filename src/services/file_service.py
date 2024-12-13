@@ -6,7 +6,7 @@ from modal.volume import Volume
 import requests
 import shortuuid
 from typing import Any, Optional
-from src.gcp_constants import GCP_PUBLIC_IMAGE_BUCKET
+from src.gcp_constants import GCP_PUBLIC_IMAGE_BUCKET,GCP_BUCKET_ENDPOINT_URL
 from src.models.schemas import AgentConfig,volume
 
 class FileService:
@@ -28,12 +28,16 @@ class FileService:
         print(f"Saving JSON to {path}\n")
         with path.open('w') as f:
             json.dump(data, f)
-        self.volume.commit()
+        # Only commit if not saving to GCP bucket
+        if GCP_BUCKET_ENDPOINT_URL not in str(path):
+            self.volume.commit()
 
     def load_json(self, workspace_id: str, filename: str) -> Optional[dict]:
-        self.volume.reload()
         path = self.get_path(workspace_id, filename)
         print(f"Loading JSON from {path}\n")
+        # Only reload volume if not loading from GCP bucket
+        if GCP_BUCKET_ENDPOINT_URL not in str(path):
+            self.volume.reload()
         if path.exists():
             with path.open('r') as f:
                 return json.load(f)

@@ -1,0 +1,27 @@
+# llm_api.py
+
+class LLMapi:
+    def __init__(self, base_url, api_key):
+        from openai import OpenAI
+        self.client = OpenAI(
+            base_url=base_url,
+            api_key=api_key
+        )
+
+    def generate(self, messages: [str], model="meta-llama/Meta-Llama-3-8B-Instruct"):
+        chat_completion = self.client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True,
+        )
+
+        for event in chat_completion:
+            if event.choices[0].finish_reason:
+                print(f"Finish reason: {event.choices[0].finish_reason}")
+                if event.usage:
+                    print(f"Prompt tokens: {event.usage.prompt_tokens}")
+                    print(f"Completion tokens: {event.usage.completion_tokens}")
+            else:
+                content = event.choices[0].delta.content
+                if content:
+                    yield content
