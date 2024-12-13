@@ -42,7 +42,7 @@ container_idle_timeout=60 * 15,
 allow_concurrent_inputs=10,
 image=agent_image,
 secrets=[
-    modal.Secret.from_name("gcp-secret-prod"),
+    modal.Secret.from_name("googlecloud-secret"),
     modal.Secret.from_name("deep-infra-api-key"),
     modal.Secret.from_name("falai-apikey"),
     modal.Secret.from_name("openai-secret"),
