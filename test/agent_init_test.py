@@ -1,11 +1,11 @@
 import requests
 import os
 
-API_URL = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/prompt"
+API_URL = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/"
 AUTH_TOKEN = os.environ["API_KEY"]
 
 def init_agent():
-    url = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/init_agent"
+    url = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/"
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
         "Content-Type": "application/json"

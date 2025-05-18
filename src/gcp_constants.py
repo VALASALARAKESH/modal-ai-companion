@@ -7,7 +7,6 @@ GCP_PUBLIC_IMAGE_BUCKET = 'ai-companion-bucket-image'
 GCP_CHAT_BUCKET = 'ai-companion-bucket-chat'
 
 
-#GCP_PUBLIC_IMAGE_BUCKET = 'coqui-samples'
-#GCP_CHAT_BUCKET = 'modal-agent-chat-test'
+
 
 GCP_BUCKET_ENDPOINT_URL = "https://storage.googleapis.com"

@@ -6,7 +6,7 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.10.0,<3.12"
-modal = "0.65.46"
+modal = "0.73.81"
 fastapi = "0.114.0"
 pydantic = "2.6.4"
 requests = "2.32.2"

@@ -28,12 +28,12 @@ class ChatHandler:
             similar_chunks = self.index_handler.search(prompt, agent_config)
             if similar_chunks:
                 relevant_backstory = "\n".join(similar_chunks)
-                #print("\nRelevant backstory: "+relevant_backstory)
+                # print("\nRelevant backstory: "+relevant_backstory)
 
         # Get the formatted system prompt
         system_prompt = self._format_system_prompt(
             agent_config, updated_backstory=relevant_backstory)
-        #print(f"System prompt fromatted: {system_prompt}")
+        # print(f"System prompt fromatted: {system_prompt}")
         messages.append({
             "tag": "initial_system_prompt",
             "role": "system",
@@ -45,8 +45,6 @@ class ChatHandler:
         messages.extend(
             [msg for msg in history if msg.get('role') != 'system'])
 
-        # Add the user's prompt
-        messages.append({"tag": "text", "role": "user", "content": prompt})
         # Filter messages to fit context window
         max_context_size = agent_config.llm_config.context_size
 
@@ -67,7 +65,7 @@ class ChatHandler:
                 char_appearance=agent_config.character.appearance,
                 char_personality=agent_config.character.personality,
                 char_backstory=updated_backstory
-                or agent_config.character.backstory,
+                               or agent_config.character.backstory,
                 tags=agent_config.character.tags,
                 char_seed=agent_config.character.seed_message,
                 char=agent_config.character.name)
@@ -172,12 +170,12 @@ class ChatHandler:
                 break
         # Restore message order: system first, then chronological
         return (
-            [msg for msg in filtered_messages if msg.get('role') == 'system'] +
-            list(
-                reversed([
-                    msg
-                    for msg in filtered_messages if msg.get('role') != 'system'
-                ])))
+                [msg for msg in filtered_messages if msg.get('role') == 'system'] +
+                list(
+                    reversed([
+                        msg
+                        for msg in filtered_messages if msg.get('role') != 'system'
+                    ])))
 
     def delete_chat_history(self, agent_config: AgentConfig) -> bool:
         """Delete chat history file for the given agent config."""
@@ -191,6 +189,16 @@ class ChatHandler:
 
         return [msg for msg in messages if msg.get('tag') != 'image']
 
+    def remove_audio_messages(self, messages: List[dict]) -> List[dict]:
+        """Remove messages that contain image tag from chat history."""
+
+        return [msg for msg in messages if msg.get('tag') != 'audio']
+
+    def remove_multimedia_messages(self, messages: List[dict]) -> List[dict]:
+        """Remove messages that contain image tag from chat history."""
+
+        return [msg for msg in messages if msg.get('tag') not in ['image', 'voice']]
+
     def keep_last_image_message(self, messages: List[dict]) -> List[dict]:
         """Keep the last image in chat history but remove all prior ones."""
 
@@ -199,8 +207,18 @@ class ChatHandler:
 
         if last_image_index is not None:
             print(f"Found an image message at index: {last_image_index}")
+            messages[last_image_index]['content'] = "My last image was described as follows: " + \
+                                                    messages[last_image_index]['content'].split("[")[1].split("]")[0]
 
         return [
             msg for i, msg in enumerate(messages)
             if msg.get('tag') != 'image' or i == last_image_index
         ]
+
+    def clean_extra_tags(self, messages: List[dict]) -> List[dict]:
+        """Clean the messages to retain only the content field."""
+        cleaned_messages = []
+        for msg in messages:
+            if 'content' in msg:
+                cleaned_messages.append({'content': msg['content']})
+        return cleaned_messages

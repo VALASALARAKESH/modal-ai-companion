@@ -6,7 +6,7 @@ import shortuuid
 from character_loader import load_character_from_yaml, Character
 from typing import List, Dict
 
-API_URL = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/prompt"
+API_URL = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/prompt"
 AUTH_TOKEN = os.environ["API_KEY"]
 TIMEOUT_SETTINGS = httpx.Timeout(
     timeout=300.0,  # 5 minutes total timeout
@@ -38,7 +38,7 @@ class ConcurrentClient:
             print("Failed to load character, using defaults")
             return
 
-        init_url = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/init_agent"
+        init_url = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/init_agent"
         agent_config = {
             **workspace_ids,
             "character": character.to_dict()

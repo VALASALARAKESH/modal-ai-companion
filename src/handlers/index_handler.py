@@ -3,21 +3,22 @@ from typing import List, Dict, Optional
 import pickle
 
 import pathlib
-from src.models.schemas import AgentConfig,volume
+from src.models.schemas import AgentConfig, volume
 from src.services.file_service import FileService
+
 
 class IndexHandler:
     def __init__(self):
-        
+
         self.embedding_api = None
         self.file_service = FileService('/data')
 
     def initialize_embedding_api(self, agent_config: AgentConfig):
-        from openai import OpenAI
+        from together import Together
         import os
 
         if self.embedding_api is None:
-            self.embedding_api = OpenAI(
+            self.embedding_api = Together(
                 base_url="https://api.deepinfra.com/v1/openai",
                 api_key=os.environ["DEEP_INFRA_API_KEY"]
             )
@@ -95,8 +96,8 @@ class IndexHandler:
             index.load(str(index_path))
 
             similar_ids, distances = index.get_nns_by_vector(
-                query_embedding, 
-                n, 
+                query_embedding,
+                n,
                 search_k=-1,  # Use default search_k
                 include_distances=True
             )
@@ -120,7 +121,7 @@ class IndexHandler:
     def _chunk_text(self, text: str, chunk_size: int = 50) -> List[str]:
         """Split text into chunks."""
         words = text.split()
-        return [' '.join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
+        return [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
 
     def _embed_long_text(self, text: str) -> List[Dict]:
         """Chunk and embed long text."""
@@ -128,7 +129,7 @@ class IndexHandler:
 
         # Get embeddings for all chunks
         embeddings = []
-        for chunk_batch in [chunks[i:i+100] for i in range(0, len(chunks), 100)]:
+        for chunk_batch in [chunks[i:i + 100] for i in range(0, len(chunks), 100)]:
             chunk_batch = [text.replace("\n", " ") for text in chunk_batch]
             response = self.embedding_api.embeddings.create(
                 input=chunk_batch,

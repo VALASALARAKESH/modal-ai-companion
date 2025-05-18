@@ -137,19 +137,7 @@ files = [
 [package.dependencies]
 frozenlist = ">=1.1.0"
 
-[[package]]
-name = "aiostream"
-version = "0.5.2"
-description = "Generator-based operators for asynchronous iteration"
-optional = false
-python-versions = ">=3.8"
-files = [
-    {file = "aiostream-0.5.2-py3-none-any.whl", hash = "sha256:054660370be9d37f6fe3ece3851009240416bd082e469fd90cc8673d3818cf71"},
-    {file = "aiostream-0.5.2.tar.gz", hash = "sha256:b71b519a2d66c38f0872403ab86417955b77352f08d9ad02ad46fc3926b389f4"},
-]
 
-[package.dependencies]
-typing-extensions = "*"
 
 [[package]]
 name = "annotated-types"
@@ -735,12 +723,13 @@ files = [
 
 [[package]]
 name = "modal"
-version = "0.65.46"
+version = "0.73.81"
 description = "Python client library for Modal"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "modal-0.65.46-py3-none-any.whl", hash = "sha256:18b01fd4cb671b7706a917464c0ec3f194c364fa5bba8f6d0340a38b05cf33ea"},
+    {file = "modal-0.73.81-py3-none-any.whl", hash = "sha256:9c9ce548c1bde97aeba07904f6754910667a97250b5a44eb4dd9797bc387c969"},
+    {file = "modal-0.73.81.tar.gz", hash = "sha256:9404481b1dcd2b926597f87afb9e1729caac8f49b8dc58302ba8e6f138d1be56"},
 ]
 
 [package.dependencies]
@@ -752,7 +741,7 @@ fastapi = "*"
 grpclib = "0.4.7"
 protobuf = ">=3.19,<4.24.0 || >4.24.0,<6.0"
 rich = ">=12.0.0"
-synchronicity = ">=0.9.3,<0.10.0"
+synchronicity = ">=0.9.10,<0.10.0"
 toml = "*"
 typer = ">=0.9"
 types-certifi = "*"
@@ -1220,13 +1209,13 @@ full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7
 
 [[package]]
 name = "synchronicity"
-version = "0.9.3"
+version = "0.9.11"
 description = "Export blocking and async library versions from a single async implementation"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "synchronicity-0.9.3-py3-none-any.whl", hash = "sha256:73c06fe6613c698cbcfa6e77ab6b8d49cce3494c5afc3ef23b007b1fdff2256d"},
-    {file = "synchronicity-0.9.3.tar.gz", hash = "sha256:d3856601e63e518a143ec42f57988d9e88e4f94716168b717fd4b1b64f4704fd"},
+    {file = "synchronicity-0.9.11-py3-none-any.whl", hash = "sha256:231129654d2f56b1aa148e85ebd8545231be135771f6d2196d414175b1594ef6"},
+    {file = "synchronicity-0.9.11.tar.gz", hash = "sha256:cb5dbbcb43d637e516ae50db05a776da51a705d1e1a9c0e301f6049afc3c2cae"},
 ]
 
 [package.dependencies]
@@ -1534,4 +1523,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10.0,<3.12"
-content-hash = "a3ecab461949148eca8c315570ecb617c89ce5d0a370cbfecd357c43c64fa1a0"
+content-hash = "10d1adbfc1c7f87c4d4e8dbb9f6c0587ac558750ee03dce9ed29e6eb6726b471"

@@ -1,7 +1,7 @@
 entrypoint = "main.py"
 modules = ["python-3.11"]
 
-run = "modal serve src.app"
+run = "modal serve -m src.app"
 
 [nix]
 channel = "stable-24_05"

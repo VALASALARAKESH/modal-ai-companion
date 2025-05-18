@@ -1,9 +1,10 @@
 # src/handlers/agent_config_handler.py
-from typing import Optional, Dict,Union
-from src.models.schemas import AgentConfig,PromptConfig
+from typing import Optional, Dict, Union
+from src.models.schemas import AgentConfig, PromptConfig
 from src.handlers.index_handler import IndexHandler
 from src.services.file_service import FileService
 from src.services.cache_service import CacheService
+
 
 class AgentConfigHandler:
     def __init__(self):
@@ -11,7 +12,8 @@ class AgentConfigHandler:
         self.cache_service = CacheService()
         self.index_handler = IndexHandler()
 
-    def get_or_create_config(self, agent_config: Union[AgentConfig, PromptConfig], update_config: bool = False) -> Union[AgentConfig, PromptConfig]:
+    def get_or_create_config(self, agent_config: Union[AgentConfig, PromptConfig], update_config: bool = False) -> \
+    Union[AgentConfig, PromptConfig]:
         """
         Get existing config or create new one if it doesn't exist
         """
@@ -33,7 +35,7 @@ class AgentConfigHandler:
                         del base_dict['prompt']
                     return PromptConfig(**base_dict, prompt=agent_config.prompt)
                 return cached_config
-                
+
         # Try to get from file cache
         config_path = f"{agent_config.agent_id}_config.json"
         if not update_config:
@@ -46,18 +48,18 @@ class AgentConfigHandler:
                 existing_config = AgentConfig(**existing_config)
                 self.cache_service.set(agent_config.workspace_id, agent_config.agent_id, existing_config)
                 return existing_config
-                
+
         # Create embedding index if background text exists and is long enough
-        if (agent_config.character and 
-            agent_config.character.backstory and 
-            len(agent_config.character.backstory) > 10000):
+        if (agent_config.character and
+                agent_config.character.backstory and
+                len(agent_config.character.backstory) > 10000):
             print("Creating embedding index for background text")
             success = self.index_handler.create_and_save_index(
                 agent_config.character.backstory,
                 agent_config,
             )
 
-        print("Saving config to cache and file")        
+        print("Saving config to cache and file")
         # Save to both cache and file
         self.cache_service.set(agent_config.workspace_id, agent_config.agent_id, agent_config)
         self.file_service.save_json(
@@ -77,7 +79,7 @@ class AgentConfigHandler:
         cached_config = self.cache_service.get(workspace_id, agent_id)
         if cached_config:
             return cached_config
-            
+
         # Try file cache
         config_data = self.file_service.load_json(
             workspace_id,
@@ -103,4 +105,4 @@ class AgentConfigHandler:
         """
         Clear the configuration cache
         """
-        self.cache_service.clear(workspace_id,agent_id)
+        self.cache_service.clear(workspace_id, agent_id)

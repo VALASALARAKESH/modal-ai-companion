@@ -4,7 +4,7 @@ import os
 import shortuuid
 from character_loader import load_character_from_yaml, Character
 
-API_URL = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/prompt"
+API_URL = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/prompt"
 AUTH_TOKEN = os.environ["API_KEY"]
 WORKSPACE = "default704"
 AGENT_ID = shortuuid.uuid()
@@ -57,7 +57,7 @@ async def init_character(client: httpx.AsyncClient, character_yaml: str):
         "character": character.to_dict()
     }
 
-    init_url = "https://mikpoik--modal-agent-fastapi-app-dev.modal.run/init_agent"
+    init_url = "https://valasalarakesh--modal-agent-fastapi-app-dev.modal.run/init_agent"
     response = await client.post(init_url, headers=headers, json=agent_config, timeout=TIMEOUT_SETTINGS)
     if response.status_code == 200:
         print("Agent initialized\n***Chat***")
@@ -67,10 +67,10 @@ async def init_character(client: httpx.AsyncClient, character_yaml: str):
 async def main():
     async with httpx.AsyncClient() as client:
         # Initialize with character from YAML
-        await init_character(client, "test/characters/velvet.yaml")
+        await init_character(client, "test/characters/ashley.yaml")
 
         # Initial scene setup with structured prompt
-        initial_prompt = """Now begin role-play with me."""
+        initial_prompt = """Now let's role-play, write character's next response"""
         await send_message(client, initial_prompt)
 
 
